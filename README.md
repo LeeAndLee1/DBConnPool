@@ -1,6 +1,3 @@
-# DBConnPool
-design database connection pool by c++
-
 一、使用数据库连接池目的
     在高并发情况下，如果每次操作数据库都需要连接数据库，操作完再释放连接，连接和释放这2个过程是非常耗费资源和时间的。为了避免频繁的连接和释放，使用数据库连接池。
 二、实现数据库连接池的基本思路
@@ -28,27 +25,38 @@ design database connection pool by c++
     考虑容器基于队列queue实现，当队头元素的存活时间都没超过最大空闲时间的话，后面的连接肯定也没超过该最大空闲时间。
 2.2、连接池的主要功能
 （1）创建一个连接池对象。（因为是一个单例模式）
-（2）初始化连接数以及生产新连接（生产过程是连接池类内部多线程创建的，所以权限为private；另外需要定义一个连接数计算器，使用原子变量atomic，就不需要用互斥锁来保护该计数器了）
+（2）初始化连接数以及生产新连接（生产过程是连接池类内部多线程创建的，所以权限为private；另外需要定义一个连接数计算器，使用原子变atomic，就不需要用互斥锁来保护该计数器了）
 （3）从连接池中获取一个可用连接（消费过程是用户请求，权限为public；用完后归还到队列中）
 （4）回收连接（通过定义一个扫描函数，获取每个连接的空闲时间，用于多余连接的释放）
 （5）加载初始配置项，主要是数据库连接参数如用户名密码等（可选）
 
+五、测试
+1、测试前先创建名为chat的数据库，tables1的表（id: int not null, name: varchar(100) not null）。注意数据库登录信息的修改。
+2、mkdir build bin lib
+3、cd build/ && cmake ..
+4、make
+5、cd ../bin/ && ./main
+六、测试结果
+（1）4个线程不使用连接池共往数据库中插入4w条数据耗时：65140000ms
+（2）4个线程使用连接池共往数据库中插入4w条数据耗时：2300000ms
 
 
-
-//c++11magicstatic特性：如果当变量在初始化的时候，并发同时进⻉声明语句，并发线程将会阻塞等待初始化结束。
-classSingleton//懒汉模式
+// 懒汉模式单例
+class Singleton
 {
-public:
-~Singleton(){}
-static Singleton& GetInstance()
-{
-static Singletoninstance;
-returninstance;
-}
 private:
-Singleton(){}//子类会调用父类的构造函数，但是父类构造函数为私有的，因此这种类无法被继承Singleton(constSingleton&){}Singleton&operator=(constSingleton&){}};//继承Singleton//g++Singleton.cpp-osingleton-std=c++11/*该版本具备版本5所有优点：1.利⻉静态局部变量特性，延迟加载；
-2.利⻉静态局部变量特性，系统⻉动回收内存，⻉动调⻉析构函数；3.静态局部变量初始化时，没有new操作带来的cpu指令reorder操作；4.c++11静态局部变量初始化时，自带线程安全；*/  
+    Singleton() { std::cout << "Constructor!" << std::endl; };
+    Singleton(Singleton&) = delete;
+    Singleton& operator=(const Singleton&) = delete;
+public:
+    ~Singleton() { std::cout << "Destructor!" << std::endl; };
+    static Singleton& instance()
+    {
+        static Singleton ins;//静态局部变量，内存中只有一个，且只会被初始化一次
+        return ins;
+    }
+    void Fun() { std::cout << "Fun" << std::endl; };//其他公有接口
+};
 
     
     
